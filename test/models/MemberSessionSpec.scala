@@ -2,10 +2,11 @@ package models
 
 import java.time.LocalDateTime
 
+import helpers.LocalDateTimeFormatter
 import org.scalatest.{MustMatchers, WordSpec}
 import play.api.libs.json.Json
 
-class MemberSessionSpec extends WordSpec with MustMatchers {
+class MemberSessionSpec extends WordSpec with MustMatchers with LocalDateTimeFormatter {
 
   "MemberSession model" must {
     val id = "a1b2c3d4e5f6g7h8"
