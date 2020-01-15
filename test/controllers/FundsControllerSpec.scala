@@ -141,6 +141,9 @@ class FundsControllerSpec extends WordSpec with MustMatchers with MockitoSugar w
     }
 
     "return a BAD_REQUEST response with correct error message if the user is not logged in" in {
+      when(mockMemberRepository.findMemberById(any()))
+        .thenReturn(Future.successful(Some(Member(card, name, email, mobile, 500, pin))))
+
       when(mockSessionService.isUserLoggedIn(any)).thenReturn(Future.successful(false))
 
       val request = FakeRequest(GET, routes.FundsController.checkFunds(Card("a1b2c3d4e5f6g7h8")).url)

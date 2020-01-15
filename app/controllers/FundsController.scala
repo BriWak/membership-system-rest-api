@@ -19,11 +19,11 @@ class FundsController @Inject()(cc: ControllerComponents,
 
   def addFunds(card: Card, increase: Int): Action[AnyContent] = updateSessionAction(card).async {
     implicit request =>
-      sessionService.isUserLoggedIn(card).flatMap {
-        case false => Future.successful(BadRequest("Please log in to add funds."))
-        case true =>
-          memberRepository.findMemberById(card).flatMap {
-            case Some(_) =>
+      memberRepository.findMemberById(card).flatMap {
+        case Some(_) =>
+          sessionService.isUserLoggedIn(card).flatMap {
+            case false => Future.successful(BadRequest("Please log in to add funds."))
+            case true =>
               increase match {
                 case amount if amount <= 0 => Future.successful(
                   BadRequest("You must provide a positive amount to increase your funds.")
@@ -32,8 +32,8 @@ class FundsController @Inject()(cc: ControllerComponents,
                   Ok(s"Additional funds of $increase have been added to your card.")
                 }
               }
-            case None => Future.successful(NotFound(s"A member could not be found with card id: ${card._id}."))
           }
+        case None => Future.successful(NotFound(s"A member could not be found with card id: ${card._id}."))
       } recoverWith {
         case _: JsResultException => Future.successful(
           BadRequest("Incorrect data - unable to parse Json data to the Member model.")
@@ -44,36 +44,36 @@ class FundsController @Inject()(cc: ControllerComponents,
 
   def checkFunds(card: Card): Action[AnyContent] = updateSessionAction(card).async {
     implicit request =>
-      sessionService.isUserLoggedIn(card).flatMap {
-        case false => Future.successful(BadRequest("Please log in to check your funds."))
-        case true =>
-          memberRepository.findMemberById(card).map {
-            case Some(member) => Ok(Json.toJson(member.funds))
-            case None => NotFound(s"A member could not be found with card id: ${card._id}.")
-          } recoverWith {
-            case _: JsResultException =>
-              Future.successful(BadRequest("Incorrect data - unable to parse Json data to the Member model."))
-            case e =>
-              Future.successful(BadRequest(s"An issue has occurred resulting in the following exception: $e."))
+      memberRepository.findMemberById(card).flatMap {
+        case Some(member) =>
+          sessionService.isUserLoggedIn(card).flatMap {
+            case false => Future.successful(BadRequest("Please log in to check your funds."))
+            case true => Future.successful(Ok(Json.toJson(member.funds)))
           }
+        case None => Future.successful(NotFound(s"A member could not be found with card id: ${card._id}."))
+      } recoverWith {
+        case _: JsResultException =>
+          Future.successful(BadRequest("Incorrect data - unable to parse Json data to the Member model."))
+        case e =>
+          Future.successful(BadRequest(s"An issue has occurred resulting in the following exception: $e."))
       }
   }
 
   def purchaseGoods(card: Card, amount: Int): Action[AnyContent] = updateSessionAction(card).async {
     implicit request =>
-      sessionService.isUserLoggedIn(card).flatMap {
-        case false => Future.successful(BadRequest("Please log in to purchase goods."))
-        case true =>
-          memberRepository.findMemberById(card).flatMap {
-            case Some(member) => {
+      memberRepository.findMemberById(card).flatMap {
+        case Some(member) => {
+          sessionService.isUserLoggedIn(card).flatMap {
+            case false => Future.successful(BadRequest("Please log in to purchase goods."))
+            case true =>
               if (amount > member.funds)
                 Future.successful(BadRequest("You do not have enough funds to complete this transaction."))
               else memberRepository.transactionById(card, amount).map { _ =>
                 Ok("Your transaction was successful.")
               }
-            }
-            case None => Future.successful(NotFound(s"A member could not be found with card id: ${card._id}."))
           }
+        }
+        case None => Future.successful(NotFound(s"A member could not be found with card id: ${card._id}."))
       }.recoverWith {
         case _: JsResultException => Future.successful(
           BadRequest("Incorrect data - unable to parse Json data to the Member model.")
